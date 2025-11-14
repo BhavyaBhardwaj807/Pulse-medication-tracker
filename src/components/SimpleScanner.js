@@ -1,19 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createWorker } from 'tesseract.js';
 
 const SimpleScanner = ({ showCamera, setShowCamera, onScanResult }) => {
   const [stream, setStream] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [ocrWorker, setOcrWorker] = useState(null);
   const videoRef = useRef(null);
   const recognitionRef = useRef(null);
 
   useEffect(() => {
     if (showCamera) {
       startCamera();
+      initOCR();
     } else {
       stopCamera();
     }
-    return () => stopCamera();
+    return () => {
+      stopCamera();
+      if (ocrWorker) {
+        ocrWorker.terminate();
+      }
+    };
   }, [showCamera]);
 
   useEffect(() => {
@@ -63,18 +71,103 @@ const SimpleScanner = ({ showCamera, setShowCamera, onScanResult }) => {
     }
   };
 
-  const handleScan = () => {
+  const initOCR = async () => {
+    try {
+      const worker = await createWorker();
+      await worker.loadLanguage('eng');
+      await worker.initialize('eng');
+      setOcrWorker(worker);
+    } catch (error) {
+      console.error('OCR initialization failed:', error);
+    }
+  };
+
+  const handleScan = async () => {
+    if (!ocrWorker || !videoRef.current) {
+      alert('Scanner not ready. Please try again.');
+      return;
+    }
+
     setIsScanning(true);
-    // Simulate scanning
-    setTimeout(() => {
-      setIsScanning(false);
-      const name = prompt('Enter medicine name:');
-      if (name) {
-        const dosage = prompt('Enter dosage:') || 'Not specified';
-        onScanResult({ name, dosage });
-        setShowCamera(false);
+    
+    try {
+      // Capture frame from video
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      ctx.drawImage(videoRef.current, 0, 0);
+      
+      // Perform OCR
+      const { data: { text } } = await ocrWorker.recognize(canvas);
+      
+      if (text && text.trim().length > 2) {
+        const result = extractMedicineInfo(text);
+        if (result.name) {
+          onScanResult(result);
+          setShowCamera(false);
+        } else {
+          fallbackToManual('Could not detect medicine name from image.');
+        }
+      } else {
+        fallbackToManual('No text detected. Please ensure good lighting and clear text.');
       }
-    }, 2000);
+    } catch (error) {
+      console.error('Scanning error:', error);
+      fallbackToManual('Scanning failed. Please try again.');
+    }
+    
+    setIsScanning(false);
+  };
+
+  const extractMedicineInfo = (text) => {
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 2);
+    let name = '';
+    let dosage = '';
+    
+    // Extract dosage
+    const dosageRegex = /(\d+(?:\.\d+)?)\s*(mg|mcg|g|ml|iu|units?|tablets?)/i;
+    for (const line of lines) {
+      const match = line.match(dosageRegex);
+      if (match) {
+        dosage = match[1] + match[2].toLowerCase();
+        break;
+      }
+    }
+    
+    // Extract medicine name
+    const excludeWords = ['tablet', 'capsule', 'syrup', 'mg', 'mcg', 'use', 'take', 'daily', 'exp', 'mfg'];
+    
+    for (const line of lines) {
+      const cleanLine = line.replace(/[^a-zA-Z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+      const words = cleanLine.split(' ').filter(w => w.length >= 3);
+      const validWords = words.filter(w => !excludeWords.includes(w.toLowerCase()));
+      
+      if (validWords.length >= 1) {
+        const candidateName = validWords.slice(0, 2).join(' ');
+        if (candidateName.length > name.length) {
+          name = candidateName.split(' ').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          ).join(' ');
+        }
+      }
+    }
+    
+    return { name, dosage: dosage || 'Not specified' };
+  };
+
+  const fallbackToManual = (message) => {
+    const name = prompt(`${message}\n\nEnter medicine name manually:`);
+    if (name && name.trim()) {
+      const dosage = prompt('Enter dosage (e.g., 500mg, 2 tablets):') || 'Not specified';
+      onScanResult({ 
+        name: name.trim().split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' '), 
+        dosage 
+      });
+      setShowCamera(false);
+    }
   };
 
   const handleVoice = () => {
@@ -155,9 +248,9 @@ const SimpleScanner = ({ showCamera, setShowCamera, onScanResult }) => {
             <button 
               className="scan-action-btn"
               onClick={handleScan}
-              disabled={isScanning || !stream}
+              disabled={isScanning || !stream || !ocrWorker}
             >
-              {isScanning ? 'Scanning...' : '🔍 Scan Medicine'}
+              {isScanning ? 'Scanning...' : !ocrWorker ? 'Loading OCR...' : '🔍 Scan Medicine'}
             </button>
             <button 
               className="voice-action-btn"
