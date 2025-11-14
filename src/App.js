@@ -27,6 +27,8 @@ function App() {
   const [showProfile, setShowProfile] = useState(false);
   const [userProfile, setUserProfile] = useState({ email: '', name: '', remindersEnabled: false });
   const [medicalHistory, setMedicalHistory] = useState(medicalHistoryData);
+  const [additionalDetails, setAdditionalDetails] = useState('');
+  const [showAdditionalDetails, setShowAdditionalDetails] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('pulse-medications');
@@ -47,6 +49,9 @@ function App() {
     
     const savedProfile = localStorage.getItem('pulse-profile');
     if (savedProfile) setUserProfile(JSON.parse(savedProfile));
+    
+    const savedDetails = localStorage.getItem('pulse-additional-details');
+    if (savedDetails) setAdditionalDetails(savedDetails);
     
     const history = Array.from({length: 7}, (_, i) => {
       const taken = Math.floor(Math.random() * 4) + 2;
@@ -878,6 +883,47 @@ function App() {
                               <span className="family-conditions">{family.conditions.join(', ')}</span>
                             </div>
                           ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="additional-details-section">
+                    <div className="section-header">
+                      <h4>📝 Additional Details</h4>
+                      <button 
+                        className="toggle-details-btn"
+                        onClick={() => setShowAdditionalDetails(!showAdditionalDetails)}
+                      >
+                        {showAdditionalDetails ? '➖ Hide' : '➕ Add More Details'}
+                      </button>
+                    </div>
+                    
+                    {showAdditionalDetails && (
+                      <div className="details-form">
+                        <textarea
+                          className="details-textarea"
+                          placeholder="Add any additional notes, side effects, concerns, or observations about your medication adherence..."
+                          value={additionalDetails}
+                          onChange={(e) => setAdditionalDetails(e.target.value)}
+                          rows={4}
+                        />
+                        <div className="details-actions">
+                          <button 
+                            className="save-details-btn"
+                            onClick={() => {
+                              localStorage.setItem('pulse-additional-details', additionalDetails);
+                              alert('Additional details saved successfully!');
+                            }}
+                          >
+                            💾 Save Details
+                          </button>
+                          <button 
+                            className="clear-details-btn"
+                            onClick={() => setAdditionalDetails('')}
+                          >
+                            🗑️ Clear
+                          </button>
                         </div>
                       </div>
                     )}
