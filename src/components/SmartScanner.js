@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 const SmartScanner = ({ 
   showCamera, 
@@ -11,6 +11,15 @@ const SmartScanner = ({
   startVoiceInput, 
   recognition 
 }) => {
+  useEffect(() => {
+    if (stream) {
+      const video = document.getElementById('camera-video');
+      if (video) {
+        video.srcObject = stream;
+      }
+    }
+  }, [stream]);
+
   if (!showCamera) return null;
 
   return (
@@ -38,24 +47,24 @@ const SmartScanner = ({
         
         <div className="camera-container">
           <div className="camera-preview">
-            {!stream ? (
-              <div className="camera-placeholder">
+            <video 
+              id="camera-video" 
+              autoPlay 
+              playsInline 
+              muted
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                borderRadius: '12px',
+                backgroundColor: '#000'
+              }}
+            />
+            {!stream && (
+              <div className="camera-overlay">
                 <div className="camera-icon">📷</div>
                 <p>Initializing camera...</p>
               </div>
-            ) : (
-              <video 
-                id="camera-video" 
-                autoPlay 
-                playsInline 
-                muted
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  borderRadius: '12px'
-                }}
-              />
             )}
             {isScanning && (
               <div className="scanning-overlay">

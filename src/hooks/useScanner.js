@@ -28,53 +28,31 @@ export const useScanner = () => {
 
   const startCamera = async () => {
     try {
-      // Stop any existing stream first
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
       
-      const constraints = {
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 640 },
-          height: { ideal: 480 }
-        }
-      };
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: { ideal: 'environment' } }
+      });
       
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       setStream(mediaStream);
       
-      // Wait for video element to be available
-      setTimeout(() => {
-        const video = document.getElementById('camera-video');
-        if (video && mediaStream) {
-          video.srcObject = mediaStream;
-          video.play().catch(e => console.log('Video play failed:', e));
-        }
-      }, 100);
+      // Direct assignment without timeout
+      const video = document.getElementById('camera-video');
+      if (video) {
+        video.srcObject = mediaStream;
+      }
     } catch (err) {
       console.error('Camera access error:', err);
-      setStream(null);
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance('Camera access required for medicine scanning.');
-        speechSynthesis.speak(utterance);
-      }
+      alert('Camera access denied. Please allow camera permissions and try again.');
     }
   };
 
   const stopCamera = () => {
     if (stream) {
-      stream.getTracks().forEach(track => {
-        track.stop();
-        track.enabled = false;
-      });
+      stream.getTracks().forEach(track => track.stop());
       setStream(null);
-    }
-    
-    // Clear video element
-    const video = document.getElementById('camera-video');
-    if (video) {
-      video.srcObject = null;
     }
   };
 
