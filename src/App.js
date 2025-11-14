@@ -4,13 +4,11 @@ import Header from './components/Header';
 import StatsGrid from './components/StatsGrid';
 import AddMedicationForm from './components/AddMedicationForm';
 import AdherenceReport from './components/AdherenceReport';
-import SmartScanner from './components/SmartScanner';
+import SimpleScanner from './components/SimpleScanner';
 import ProfileForm from './components/ProfileForm';
 import AgoraVoice from './components/AgoraVoice';
 import MedicationGrid from './components/MedicationGrid';
 import { useMedications } from './hooks/useMedications';
-import { useScanner } from './hooks/useScanner';
-import { useVoiceInput } from './hooks/useVoiceInput';
 import './App.css';
 
 function App() {
@@ -30,8 +28,6 @@ function App() {
   const [showAdditionalDetails, setShowAdditionalDetails] = useState(false);
 
   const { medications, streak, addMedication, toggleTaken, deleteMedication } = useMedications();
-  const { stream, isScanning, startCamera, stopCamera, scanMedicine } = useScanner();
-  const { isListening, recognition, startVoiceInput, parseSpeechToMedicine } = useVoiceInput();
 
   useEffect(() => {
     const savedProfile = localStorage.getItem('pulse-profile');
@@ -77,14 +73,7 @@ function App() {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (showCamera) {
-      startCamera();
-    } else {
-      stopCamera();
-    }
-    return () => stopCamera();
-  }, [showCamera, startCamera, stopCamera]);
+
 
   const handleAddMedication = (e) => {
     e.preventDefault();
@@ -95,57 +84,9 @@ function App() {
     setShowAddForm(false);
   };
 
-  const handleScanSuccess = (result) => {
+  const handleScanResult = (result) => {
     setNewMed({...newMed, name: result.name, dosage: result.dosage || 'Not specified'});
-    stopCamera();
-    setShowCamera(false);
     setShowAddForm(true);
-  };
-
-  const handleScanError = (error) => {
-    const suggestions = 'Common medicines: Paracetamol, Ibuprofen, Aspirin, Vitamin D, Metformin, Lisinopril';
-    const name = prompt(`${error}\n\n${suggestions}\n\nEnter medicine name manually:`);
-    
-    if (name && name.trim()) {
-      const cleanName = name.trim().split(' ').map(word => 
-        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-      ).join(' ');
-      
-      const dosage = prompt('Enter dosage (e.g., 500mg, 10ml, 2 tablets):') || 'Not specified';
-      
-      setNewMed({...newMed, name: cleanName, dosage});
-      stopCamera();
-      setShowCamera(false);
-      setShowAddForm(true);
-      
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(`Added ${cleanName} manually. Please review the details.`);
-        speechSynthesis.speak(utterance);
-      }
-    }
-  };
-
-  const handleVoiceInput = async () => {
-    if (agoraConnected) {
-      setShowAgoraVoice(true);
-      return;
-    }
-    
-    if (!recognition) {
-      setShowAgoraVoice(true);
-      return;
-    }
-    
-    startVoiceInput(
-      (result) => {
-        setNewMed(result);
-        setShowCamera(false);
-        setShowAddForm(true);
-      },
-      (error) => {
-        alert(error);
-      }
-    );
   };
 
   const saveProfile = (e) => {
@@ -198,13 +139,6 @@ function App() {
     EndCall: () => {
       setShowAgoraVoice(false);
       setAgoraConnected(false);
-      setTimeout(() => {
-        const sampleInput = 'Paracetamol 500mg once daily';
-        const result = parseSpeechToMedicine(sampleInput);
-        setNewMed(result);
-        setShowCamera(false);
-        setShowAddForm(true);
-      }, 1000);
     }
   };
 
@@ -284,16 +218,10 @@ function App() {
               setShowAdditionalDetails={setShowAdditionalDetails}
             />
 
-            <SmartScanner 
+            <SimpleScanner 
               showCamera={showCamera}
               setShowCamera={setShowCamera}
-              isScanning={isScanning}
-              isListening={isListening}
-              setIsListening={() => {}}
-              stream={stream}
-              scanMedicine={() => scanMedicine(handleScanSuccess, handleScanError)}
-              startVoiceInput={handleVoiceInput}
-              recognition={recognition}
+              onScanResult={handleScanResult}
             />
 
             <ProfileForm 
