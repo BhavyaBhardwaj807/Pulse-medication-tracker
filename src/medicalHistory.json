@@ -1,0 +1,103 @@
+{
+  "patientId": "P001",
+  "patientName": "Bhavya Bhardwaj",
+  "dateOfBirth": "1985-03-15",
+  "medicalHistory": [
+    {
+      "condition": "Thyroid Disorder (Hypothyroidism)",
+      "diagnosedAt": 28,
+      "diagnosisDate": "2013-08-20",
+      "severity": "Moderate",
+      "status": "Ongoing",
+      "prescribedMedicines": [
+        {
+          "name": "Levothyroxine",
+          "dosage": "50mcg",
+          "frequency": "Once daily",
+          "startDate": "2013-08-20",
+          "duration": "Ongoing",
+          "notes": "Take on empty stomach, 30 minutes before breakfast"
+        }
+      ],
+      "symptoms": ["Fatigue", "Weight gain", "Cold intolerance", "Hair loss"],
+      "notes": "Regular TSH monitoring required every 6 months"
+    },
+    {
+      "condition": "High Cholesterol",
+      "diagnosedAt": 32,
+      "diagnosisDate": "2017-11-10",
+      "severity": "High",
+      "status": "Controlled",
+      "prescribedMedicines": [
+        {
+          "name": "Atorvastatin",
+          "dosage": "20mg",
+          "frequency": "Once daily",
+          "startDate": "2017-11-10",
+          "duration": "Ongoing",
+          "notes": "Take in the evening with dinner"
+        }
+      ],
+      "symptoms": ["No symptoms", "Discovered during routine checkup"],
+      "labValues": {
+        "totalCholesterol": "280 mg/dL",
+        "ldl": "190 mg/dL",
+        "hdl": "35 mg/dL",
+        "triglycerides": "220 mg/dL"
+      },
+      "notes": "Lipid panel monitoring every 3 months initially, now every 6 months"
+    },
+    {
+      "condition": "Hypertension (High Blood Pressure)",
+      "diagnosedAt": 35,
+      "diagnosisDate": "2020-06-15",
+      "severity": "Stage 1",
+      "status": "Controlled",
+      "prescribedMedicines": [
+        {
+          "name": "Lisinopril",
+          "dosage": "10mg",
+          "frequency": "Once daily",
+          "startDate": "2020-06-15",
+          "duration": "Ongoing",
+          "notes": "Monitor blood pressure daily"
+        }
+      ],
+      "symptoms": ["Occasional headaches", "Dizziness"],
+      "vitalSigns": {
+        "systolic": "145 mmHg",
+        "diastolic": "95 mmHg"
+      },
+      "notes": "Lifestyle modifications recommended: low sodium diet, regular exercise"
+    }
+  ],
+  "allergies": [
+    {
+      "allergen": "Penicillin",
+      "reaction": "Skin rash, hives",
+      "severity": "Moderate",
+      "discoveredAt": 25
+    },
+    {
+      "allergen": "Shellfish",
+      "reaction": "Swelling, difficulty breathing",
+      "severity": "Severe",
+      "discoveredAt": 22
+    }
+  ],
+  "familyHistory": [
+    {
+      "relation": "Father",
+      "conditions": ["Diabetes Type 2", "Heart Disease"]
+    },
+    {
+      "relation": "Mother",
+      "conditions": ["Thyroid Disorder", "Osteoporosis"]
+    },
+    {
+      "relation": "Maternal Grandmother",
+      "conditions": ["High Blood Pressure", "Stroke"]
+    }
+  ],
+  "lastUpdated": "2024-01-15"
+}
