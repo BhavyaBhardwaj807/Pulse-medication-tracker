@@ -54,7 +54,12 @@ const SimpleScanner = ({ showCamera, setShowCamera, onScanResult }) => {
       const worker = await createWorker();
       await worker.loadLanguage('eng');
       await worker.initialize('eng');
+      await worker.setParameters({
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,-/()%',
+        tessedit_pageseg_mode: '6'
+      });
       setOcrWorker(worker);
+      console.log('OCR initialized successfully');
     } catch (error) {
       console.error('OCR initialization failed:', error);
     }
@@ -142,7 +147,9 @@ const SimpleScanner = ({ showCamera, setShowCamera, onScanResult }) => {
   const recognizeText = async (canvas) => {
     try {
       const { data: { text } } = await ocrWorker.recognize(canvas);
+      console.log('OCR detected text:', text);
       const parsedResult = parseMedicationInfo(text);
+      console.log('Parsed result:', parsedResult);
       return { fullText: text, ...parsedResult };
     } catch (error) {
       throw new Error('OCR recognition failed');
@@ -164,9 +171,22 @@ const SimpleScanner = ({ showCamera, setShowCamera, onScanResult }) => {
       canvas.height = videoRef.current.videoHeight;
       ctx.drawImage(videoRef.current, 0, 0);
       
-      const result = await recognizeText(canvas);
+      // Enhance image for better OCR
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+        const enhanced = gray > 128 ? 255 : 0;
+        data[i] = enhanced;
+        data[i + 1] = enhanced;
+        data[i + 2] = enhanced;
+      }
+      ctx.putImageData(imageData, 0, 0);
       
-      if (result.name) {
+      const result = await recognizeText(canvas);
+      console.log('Final result:', result);
+      
+      if (result.name && result.name.trim().length > 0) {
         onScanResult({
           name: result.name,
           dosage: result.strength || 'Not specified',
@@ -174,6 +194,7 @@ const SimpleScanner = ({ showCamera, setShowCamera, onScanResult }) => {
           instruction: result.instruction
         });
       } else {
+        console.log('No name detected, showing fallback');
         fallbackToManual('Could not detect medicine name from image.');
       }
     } catch (error) {
