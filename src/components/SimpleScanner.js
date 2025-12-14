@@ -151,7 +151,6 @@ const SimpleScanner = ({ showCamera, setShowCamera, onScanResult }) => {
           dosage: result.strength || 'Not specified',
           instruction: result.instruction
         });
-        setShowCamera(false);
       } else {
         fallbackToManual('Could not detect medicine name from image.');
       }
