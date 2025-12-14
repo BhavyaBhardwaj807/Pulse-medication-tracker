@@ -61,71 +61,82 @@ const SimpleScanner = ({ showCamera, setShowCamera, onScanResult }) => {
   };
 
   const parseMedicationInfo = (ocrText) => {
-    let cleanedText = ocrText.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-    
-    // Enhanced strength extraction with multiple patterns
-    const strengthPatterns = [
-      /(\d+(?:\.\d+)?)\s*(mg|ml|g|mcg|μg|unit|units|%|iu|international\s*units?|tab|tabs|tablet|tablets|cap|caps|capsule|capsules)(\s*\/\s*(ml|day|dose))?/gi,
-      /(\d+(?:\.\d+)?)\s*(milligram|milligrams|microgram|micrograms|gram|grams|milliliter|milliliters)/gi,
-      /(\d+)\s*x\s*(\d+)\s*(mg|ml|g|mcg)/gi
-    ];
-    
+    const lines = ocrText.split('\n').map(line => line.trim()).filter(line => line.length > 2);
+    let bestName = '';
     let strength = '';
-    let strengthMatch = null;
     
-    for (const pattern of strengthPatterns) {
-      strengthMatch = cleanedText.match(pattern);
-      if (strengthMatch) {
-        strength = strengthMatch[0].replace(/μg/g, 'mcg').replace(/milligram/gi, 'mg').replace(/microgram/gi, 'mcg').replace(/gram/gi, 'g').replace(/milliliter/gi, 'ml');
-        cleanedText = cleanedText.replace(strengthMatch[0], '[STRENGTH]');
+    // Enhanced strength extraction
+    const strengthRegex = /(\d+(?:\.\d+)?)\s*(mg|ml|g|mcg|μg|unit|units|%|iu|tab|tabs|tablet|tablets|cap|caps|capsule|capsules)(\s*\/\s*(ml|day))?/i;
+    for (const line of lines) {
+      const match = line.match(strengthRegex);
+      if (match) {
+        strength = match[0].replace(/μg/g, 'mcg');
         break;
       }
     }
     
-    // Instruction extraction
-    const instructionRegex = /(take|dose|dosage|directions|use)\s*(\d+.*?\s*(daily|every|as needed|times|hr|hours|morning|evening|night|am|pm))/gi;
-    const instructionMatch = cleanedText.match(instructionRegex);
-    const instruction = instructionMatch ? instructionMatch[0] : '';
+    // Original working name extraction logic
+    const excludeWords = [
+      'tablet', 'capsule', 'syrup', 'mg', 'mcg', 'use', 'take', 'daily', 'exp', 'mfg',
+      'batch', 'lot', 'date', 'pack', 'strip', 'bottle', 'box', 'label', 'pharma',
+      'ltd', 'inc', 'corp', 'company', 'manufacturing', 'manufactured', 'by'
+    ];
     
-    // Enhanced name extraction
-    let name = '';
-    if (strength) {
-      const strengthIndex = cleanedText.indexOf('[STRENGTH]');
-      if (strengthIndex > 0) {
-        const beforeStrength = cleanedText.substring(0, strengthIndex).trim();
-        const words = beforeStrength.split(' ').filter(word => word.length > 2);
-        const fillerWords = ['for', 'the', 'and', 'of', 'in', 'with', 'by', 'from', 'to', 'at', 'each', 'per', 'contains'];
-        const validWords = words.filter(word => !fillerWords.includes(word.toLowerCase()) && !/^\d+$/.test(word));
-        name = validWords.slice(-3).join(' ');
+    const commonMedicines = [
+      'paracetamol', 'acetaminophen', 'ibuprofen', 'aspirin', 'amoxicillin', 'metformin',
+      'lisinopril', 'atorvastatin', 'omeprazole', 'levothyroxine', 'amlodipine', 'simvastatin',
+      'losartan', 'gabapentin', 'sertraline', 'tramadol', 'albuterol', 'furosemide',
+      'vitamin d', 'vitamin c', 'vitamin b', 'calcium carbonate', 'iron sulfate', 'folic acid'
+    ];
+    
+    // First, look for known medicine names
+    const fullText = ocrText.toLowerCase();
+    for (const medicine of commonMedicines) {
+      if (fullText.includes(medicine)) {
+        bestName = medicine.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        break;
       }
     }
     
-    // Fallback name extraction
-    if (!name) {
-      const commonMedicines = [
-        'paracetamol', 'acetaminophen', 'ibuprofen', 'aspirin', 'amoxicillin', 'metformin',
-        'lisinopril', 'atorvastatin', 'omeprazole', 'levothyroxine', 'amlodipine', 'simvastatin',
-        'losartan', 'gabapentin', 'sertraline', 'tramadol', 'albuterol', 'furosemide',
-        'vitamin d', 'vitamin c', 'vitamin b', 'calcium', 'iron', 'magnesium', 'zinc', 'omega'
-      ];
+    // If no known medicine found, extract from lines
+    if (!bestName) {
+      let candidates = [];
       
-      const textLower = cleanedText.toLowerCase();
-      for (const medicine of commonMedicines) {
-        if (textLower.includes(medicine)) {
-          name = medicine;
-          break;
+      for (const line of lines) {
+        const cleanLine = line.replace(/[^a-zA-Z\s]/g, ' ').replace(/\s+/g, ' ').trim();
+        const words = cleanLine.split(' ').filter(w => w.length >= 3);
+        const validWords = words.filter(w => !excludeWords.includes(w.toLowerCase()));
+        
+        if (validWords.length >= 1) {
+          for (let i = 0; i < validWords.length; i++) {
+            candidates.push(validWords[i]);
+            if (i < validWords.length - 1) {
+              candidates.push(validWords[i] + ' ' + validWords[i + 1]);
+            }
+            if (i < validWords.length - 2) {
+              candidates.push(validWords[i] + ' ' + validWords[i + 1] + ' ' + validWords[i + 2]);
+            }
+          }
         }
       }
+      
+      candidates = candidates.filter(c => c.length >= 4);
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => b.length - a.length || a.localeCompare(b));
+        bestName = candidates[0];
+      }
     }
     
-    // Format name
-    if (name) {
-      name = name.split(' ').map(word => 
+    // Format the name properly
+    if (bestName) {
+      bestName = bestName.split(' ').map(word => 
         word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
       ).join(' ');
     }
     
-    return { name, strength, instruction };
+    return { name: bestName, strength: strength || 'Not specified', instruction: '' };
   };
 
   const recognizeText = async (canvas) => {
