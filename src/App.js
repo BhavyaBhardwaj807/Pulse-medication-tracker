@@ -85,7 +85,11 @@ function App() {
   };
 
   const handleScanResult = (result) => {
-    setNewMed({...newMed, name: result.name, dosage: result.dosage || 'Not specified'});
+    setNewMed({
+      ...newMed, 
+      name: result.name, 
+      dosage: result.dosage || result.strength || 'Not specified'
+    });
     setShowCamera(false);
     setShowAddForm(true);
   };
