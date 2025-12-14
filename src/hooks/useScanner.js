@@ -10,16 +10,22 @@ export const useScanner = () => {
 
   const loadLibraries = async () => {
     try {
-      const scanner = new EnhancedScanner();
-      await scanner.initialize();
-      setEnhancedScanner(scanner);
-      console.log('Enhanced scanner loaded successfully');
-      
+      // Always load Tesseract first as it's the fallback
       const worker = await createWorker();
       await worker.loadLanguage('eng');
       await worker.initialize('eng');
       setTesseract(worker);
       console.log('OCR loaded successfully');
+      
+      // Try to load enhanced scanner
+      try {
+        const scanner = new EnhancedScanner();
+        await scanner.initialize();
+        setEnhancedScanner(scanner);
+        console.log('Enhanced scanner loaded successfully');
+      } catch (enhancedError) {
+        console.warn('Enhanced scanner failed to load, using basic OCR only:', enhancedError);
+      }
     } catch (err) {
       console.error('Scanner failed to load:', err);
       setTesseract('failed');
@@ -93,6 +99,7 @@ export const useScanner = () => {
   };
 
   const scanMedicine = async (onSuccess, onError) => {
+    console.log('Starting scan...', { enhancedScanner: !!enhancedScanner, tesseract: !!tesseract });
     setIsScanning(true);
     
     try {
@@ -101,11 +108,15 @@ export const useScanner = () => {
         throw new Error('Camera not ready');
       }
       
+      if (!video.videoWidth || !video.videoHeight) {
+        throw new Error('Video not loaded properly');
+      }
+      
       let result = { name: '', dosage: '' };
       
-      if (enhancedScanner) {
+      if (enhancedScanner && tesseract && tesseract !== 'failed') {
         try {
-          result = await enhancedScanner.scanText(video);
+          result = await enhancedScanner.scanText(video, tesseract);
           console.log('Enhanced scanner result:', result);
         } catch (error) {
           console.log('Enhanced scanner failed, falling back to Tesseract:', error);
@@ -126,6 +137,8 @@ export const useScanner = () => {
           result = extractMedicineInfo(text);
         }
       }
+      
+      console.log('Final scan result:', result);
       
       if (result.name && result.name.length >= 3) {
         setIsScanning(false);

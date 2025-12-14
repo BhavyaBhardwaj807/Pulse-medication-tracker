@@ -4,11 +4,13 @@ import Header from './components/Header';
 import StatsGrid from './components/StatsGrid';
 import AddMedicationForm from './components/AddMedicationForm';
 import AdherenceReport from './components/AdherenceReport';
-import SimpleScanner from './components/SimpleScanner';
+import SmartScanner from './components/SmartScanner';
 import ProfileForm from './components/ProfileForm';
 import AgoraVoice from './components/AgoraVoice';
 import MedicationGrid from './components/MedicationGrid';
 import { useMedications } from './hooks/useMedications';
+import { useScanner } from './hooks/useScanner';
+import { useVoiceInput } from './hooks/useVoiceInput';
 import './App.css';
 
 function App() {
@@ -28,6 +30,8 @@ function App() {
   const [showAdditionalDetails, setShowAdditionalDetails] = useState(false);
 
   const { medications, streak, addMedication, toggleTaken, deleteMedication } = useMedications();
+  const { stream, isScanning, startCamera, stopCamera, scanMedicine } = useScanner();
+  const { isListening, startVoiceInput, recognition } = useVoiceInput();
 
   useEffect(() => {
     const savedProfile = localStorage.getItem('pulse-profile');
@@ -176,7 +180,10 @@ function App() {
               <div className="header-actions">
                 <button 
                   className="scan-btn"
-                  onClick={() => setShowCamera(true)}
+                  onClick={() => {
+                    setShowCamera(true);
+                    startCamera();
+                  }}
                 >
                   📷🎤 Smart Add
                 </button>
@@ -218,10 +225,19 @@ function App() {
               setShowAdditionalDetails={setShowAdditionalDetails}
             />
 
-            <SimpleScanner 
+            <SmartScanner 
               showCamera={showCamera}
-              setShowCamera={setShowCamera}
-              onScanResult={handleScanResult}
+              setShowCamera={(show) => {
+                setShowCamera(show);
+                if (!show) stopCamera();
+              }}
+              isScanning={isScanning}
+              isListening={isListening}
+              setIsListening={() => {}}
+              stream={stream}
+              scanMedicine={() => scanMedicine(handleScanResult, (error) => alert(error))}
+              startVoiceInput={() => startVoiceInput(handleScanResult, (error) => alert(error))}
+              recognition={recognition}
             />
 
             <ProfileForm 

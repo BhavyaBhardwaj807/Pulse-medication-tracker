@@ -88,6 +88,10 @@ export const useVoiceInput = () => {
     }
     
     if (!isListening) {
+      // Store callbacks for use in recognition events
+      recognition.onSuccessCallback = onSuccess;
+      recognition.onErrorCallback = onError;
+      
       setIsListening(true);
       try {
         recognition.start();
@@ -116,6 +120,14 @@ export const useVoiceInput = () => {
           if ('speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance(`Detected ${result.name}${result.dosage ? ' ' + result.dosage : ''}. Please review and save.`);
             speechSynthesis.speak(utterance);
+          }
+          // Store the callback to call it when result is available
+          if (recognitionInstance.onSuccessCallback) {
+            recognitionInstance.onSuccessCallback(result);
+          }
+        } else {
+          if (recognitionInstance.onErrorCallback) {
+            recognitionInstance.onErrorCallback('Could not understand medicine name. Please try again or enter manually.');
           }
         }
         
